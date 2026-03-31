@@ -1,0 +1,80 @@
+﻿apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: sentiment-backend
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: sentiment-backend
+spec:
+  source:
+    type: Git
+    git:
+      uri: "https://github.com/Ahmad-khoja/cloud-module3-part1.git"
+      ref: "main"
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: sentiment-backend:latest
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+    - type: GitHub
+      github:
+        secret: "CHANGE_ME_WEBHOOK_SECRET"
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: sentiment-backend
+spec:
+  replicas: 1
+  selector:
+    app: sentiment-backend
+  template:
+    metadata:
+      labels:
+        app: sentiment-backend
+    spec:
+      containers:
+        - name: sentiment-backend
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/sentiment-backend:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DEBUG
+              value: "false"
+            - name: HOST_IP
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8000"
+            - name: FRONTEND_ORIGIN
+              value: "http://localhost:5173/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment-backend
+spec:
+  selector:
+    app: sentiment-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sentiment-backend
+spec:
+  to:
+    kind: Service
+    name: sentiment-backend
+  tls:
+    termination: edge
