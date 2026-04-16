@@ -4,3 +4,4 @@ vaderSentiment==3.3.2
 python-dotenv==1.1.1
 Flask
 flask-cors
+psycopg2-binary
